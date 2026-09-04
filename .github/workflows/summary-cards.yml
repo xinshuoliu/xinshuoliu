@@ -1,0 +1,41 @@
+name: Generate Profile Summary Cards
+
+on:
+  schedule:
+    # every day at 04:00 UTC, half an hour after the 3D calendar job,
+    # so the two jobs that both commit to main never collide
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+# Belt and braces: never let this run at the same time as another job
+# that writes to main.
+concurrency:
+  group: profile-assets
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the tip of main
+        uses: actions/checkout@v4
+        with:
+          # Track the branch, not the triggering commit, so the push at the
+          # end of this job is never a non fast forward.
+          ref: main
+          fetch-depth: 0
+
+      - name: Generate the cards
+        uses: vn7n24fzkq/github-profile-summary-cards@release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          USERNAME: ${{ github.repository_owner }}
+          BRANCH_NAME: main
+          # Montreal is UTC minus 5 in winter, UTC minus 4 in summer.
+          # This only shifts the "productive time" card.
+          UTC_OFFSET: -5
